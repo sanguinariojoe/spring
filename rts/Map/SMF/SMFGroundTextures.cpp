@@ -178,8 +178,7 @@ void CSMFGroundTextures::ConvolveHeightMap(const int mapWidth, const int mipLeve
 {
 	ScopedOnceTimer timer("CSMFGroundTextures::ConvolveHeightMap");
 
-	const float* hdata = readMap->GetMIPHeightMapSynced(mipLevel);
-	const int mx = mapWidth >> mipLevel;
+	const BlockMap<float>& hBlockMap = readMap->GetMIPHeightMapBlockMap(mipLevel);
 
 	const int nbx = smfMap->numBigTexX;
 	const int nby = smfMap->numBigTexY;
@@ -198,25 +197,25 @@ void CSMFGroundTextures::ConvolveHeightMap(const int mapWidth, const int mipLeve
 			// NOTE: we leave out the borders on sampling because it is easier to do the Sobel kernel convolution
 			for (int x2 = x * mipSquareSize + 1; x2 < (x + 1) * mipSquareSize - 1; x2++) {
 				for (int y2 = y * mipSquareSize + 1; y2 < (y + 1) * mipSquareSize - 1; y2++) {
-					heightMaxima[y * nbx + x] = std::max( hdata[y2 * mx + x2], heightMaxima[y * nbx + x]);
-					heightMinima[y * nbx + x] = std::min( hdata[y2 * mx + x2], heightMinima[y * nbx + x]);
+					heightMaxima[y * nbx + x] = std::max(hBlockMap.Get(x2, y2), heightMaxima[y * nbx + x]);
+					heightMinima[y * nbx + x] = std::min(hBlockMap.Get(x2, y2), heightMinima[y * nbx + x]);
 
 					// Gx sobel kernel
 					const float gx =
-						-1.0f * hdata[(y2-1) * mx + x2-1] +
-						-2.0f * hdata[(y2  ) * mx + x2-1] +
-						-1.0f * hdata[(y2+1) * mx + x2-1] +
-						 1.0f * hdata[(y2-1) * mx + x2+1] +
-						 2.0f * hdata[(y2  ) * mx + x2+1] +
-						 1.0f * hdata[(y2+1) * mx + x2+1];
+						-1.0f * hBlockMap.Get(x2-1, y2-1) +
+						-2.0f * hBlockMap.Get(x2-1, y2  ) +
+						-1.0f * hBlockMap.Get(x2-1, y2+1) +
+						 1.0f * hBlockMap.Get(x2+1, y2-1) +
+						 2.0f * hBlockMap.Get(x2+1, y2  ) +
+						 1.0f * hBlockMap.Get(x2+1, y2+1);
 					// Gy sobel kernel
 					const float gy =
-						-1.0f * hdata[(y2+1) * mx + x2-1] +
-						-2.0f * hdata[(y2+1) * mx + x2  ] +
-						-1.0f * hdata[(y2+1) * mx + x2+1] +
-						 1.0f * hdata[(y2-1) * mx + x2-1] +
-						 2.0f * hdata[(y2-1) * mx + x2  ] +
-						 1.0f * hdata[(y2-1) * mx + x2+1];
+						-1.0f * hBlockMap.Get(x2-1, y2+1) +
+						-2.0f * hBlockMap.Get(x2  , y2+1) +
+						-1.0f * hBlockMap.Get(x2+1, y2+1) +
+						 1.0f * hBlockMap.Get(x2-1, y2-1) +
+						 2.0f * hBlockMap.Get(x2  , y2-1) +
+						 1.0f * hBlockMap.Get(x2+1, y2-1);
 
 					// linear sum, no need for fancy sqrt
 					const float g = (math::fabs(gx) + math::fabs(gy)) / mipSquareSize;

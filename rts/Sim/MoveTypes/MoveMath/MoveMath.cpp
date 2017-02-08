@@ -51,9 +51,9 @@ float CMoveMath::GetPosSpeedMod(const MoveDef& moveDef, unsigned xSquare, unsign
 		return 0.0f;
 
 	const int square = (xSquare >> 1) + ((zSquare >> 1) * mapDims.hmapx);
-	const int squareTerrType = readMap->GetTypeMapSynced()[square];
+	const int squareTerrType = readMap->GetTypeMapBlockMap().Get(xSquare >> 1, zSquare >> 1);
 
-	const float height  = readMap->GetMIPHeightMapSynced(1)[square];
+	const float height = readMap->GetMIPHeightMapBlockMap(1).Get(xSquare >> 1, zSquare >> 1);
 	const float slope   = readMap->GetSlopeMapSynced()[square];
 
 	const CMapInfo::TerrainType& tt = mapInfo->terrainTypes[squareTerrType];
@@ -75,14 +75,14 @@ float CMoveMath::GetPosSpeedMod(const MoveDef& moveDef, unsigned xSquare, unsign
 		return 0.0f;
 
 	const int square = (xSquare >> 1) + ((zSquare >> 1) * mapDims.hmapx);
-	const int squareTerrType = readMap->GetTypeMapSynced()[square];
+	const int squareTerrType = readMap->GetTypeMapBlockMap().Get(xSquare >> 1, zSquare >> 1);
 
-	const float height = readMap->GetMIPHeightMapSynced(1)[square];
+	const float height = readMap->GetMIPHeightMapBlockMap(1).Get(xSquare >> 1, zSquare >> 1);
 	const float slope  = readMap->GetSlopeMapSynced()[square];
 
 	const CMapInfo::TerrainType& tt = mapInfo->terrainTypes[squareTerrType];
 
-	const float3 sqrNormal = readMap->GetCenterNormals2DSynced()[xSquare + zSquare * mapDims.mapx];
+	const float3 sqrNormal = readMap->GetCenterNormals2DBlockMap().Get(xSquare, zSquare);
 
 	// with a flat normal, only consider the normalized xz-direction
 	// (the actual steepness is represented by the "slope" variable)

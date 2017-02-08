@@ -84,7 +84,7 @@ ILosType::ILosType(const int mipLevel_, LosType type_)
 	, type(type_)
 	, algoType((type == LOS_TYPE_LOS || type == LOS_TYPE_RADAR) ? LOS_ALGO_RAYCAST : LOS_ALGO_CIRCLE)
 	, losMaps(teamHandler->ActiveAllyTeams(),
-		CLosMap(size, type == LOS_TYPE_LOS, readMap->GetMIPHeightMapSynced(mipLevel_), int2(mapDims.mapx, mapDims.mapy)))
+		CLosMap(size, type == LOS_TYPE_LOS, readMap->GetMIPHeightMapBlockMap(mipLevel_), int2(mapDims.mapx, mapDims.mapy)))
 {
 }
 

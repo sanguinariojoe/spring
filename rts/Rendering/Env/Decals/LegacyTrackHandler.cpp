@@ -421,12 +421,10 @@ void LegacyTrackHandler::AddTrack(CUnit* unit, const float3& newPos)
 		return;
 
 	// calculate typemap-index
-	const int tmz = newPos.z / (SQUARE_SIZE * 2);
 	const int tmx = newPos.x / (SQUARE_SIZE * 2);
-	const int tmi = Clamp(tmz * mapDims.hmapx + tmx, 0, mapDims.hmapx * mapDims.hmapy - 1);
+	const int tmz = newPos.z / (SQUARE_SIZE * 2);
 
-	const unsigned char* typeMap = readMap->GetTypeMapSynced();
-	const CMapInfo::TerrainType& terType = mapInfo->terrainTypes[ typeMap[tmi] ];
+	const CMapInfo::TerrainType& terType = mapInfo->terrainTypes[ readMap->GetTypeMapBlockMap().Get(tmx, tmz) ];
 
 	if (!terType.receiveTracks)
 		return;

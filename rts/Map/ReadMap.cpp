@@ -75,22 +75,19 @@ CR_REG_METADATA(CReadMap, (
 	CR_IGNORED(heightMapUnsyncedPtr),
 	CR_IGNORED(originalHeightMap),
 	CR_IGNORED(centerHeightMap),
-	CR_IGNORED(mipCenterHeightMaps),
-	CR_IGNORED(mipPointerHeightMaps),
+	CR_IGNORED(mipHeightMaps),
 	CR_IGNORED(visVertexNormals),
 	CR_IGNORED(faceNormalsSynced),
 	CR_IGNORED(faceNormalsUnsynced),
 	CR_IGNORED(centerNormalsSynced),
 	CR_IGNORED(centerNormalsUnsynced),
-	CR_IGNORED(centerNormals2DSynced),
-	CR_IGNORED(centerNormals2DUnsynced),
 	CR_IGNORED(slopeMap),
 	CR_IGNORED(sharedCornerHeightMaps),
 	CR_IGNORED(sharedCenterHeightMaps),
 	CR_IGNORED(sharedFaceNormals),
 	CR_IGNORED(sharedCenterNormals),
-	CR_IGNORED(sharedCenterNormals2D),
 	CR_IGNORED(sharedSlopeMaps),
+	CR_IGNORED(centerNormals2D),
 	CR_MEMBER(typeMap),
 	CR_MEMBER(unsyncedHeightMapUpdates),
 	CR_MEMBER(unsyncedHeightMapUpdatesTemp),
@@ -143,8 +140,12 @@ CReadMap* CReadMap::LoadMap(const std::string& mapname)
 
 	if (typemapPtr && tbi.width == (mapDims.mapx >> 1) && tbi.height == (mapDims.mapy >> 1)) {
 		assert(mapDims.hmapx == tbi.width && mapDims.hmapy == tbi.height);
-		rm->typeMap.resize(tbi.width * tbi.height);
-		memcpy(&rm->typeMap[0], typemapPtr, tbi.width * tbi.height);
+		rm->typeMap.resize(tbi.width, tbi.height);
+		for (int y = 0; y < mapDims.hmapy >> 1; ++y) {
+			for (int x = 0; x < mapDims.hmapx >> 1; ++x) {
+				rm->typeMap.Set(x, y, typemapPtr[y * mapDims.hmapx + x]);
+			}
+		}
 	} else
 		throw content_error("[CReadMap::LoadMap] bad/no terrain typemap");
 
@@ -197,18 +198,10 @@ void CReadMap::PostLoad()
 	sharedCenterNormals[0] = &centerNormalsUnsynced[0];
 	sharedCenterNormals[1] = &centerNormalsSynced[0];
 
-	sharedCenterNormals2D[0] = &centerNormals2DUnsynced[0];
-	sharedCenterNormals2D[1] = &centerNormals2DSynced[0];
-
 	sharedSlopeMaps[0] = &slopeMap[0]; // NO UNSYNCED VARIANT
 	sharedSlopeMaps[1] = &slopeMap[0];
 
-	//FIXME reconstruct
-	/*mipPointerHeightMaps.resize(numHeightMipMaps, nullptr);
-	mipPointerHeightMaps[0] = &centerHeightMap[0];
-	for (int i = 1; i < numHeightMipMaps; i++) {
-		mipPointerHeightMaps[i] = &mipCenterHeightMaps[i - 1][0];
-	}*/
+	//FIXME reconstruct mipHeightMaps
 }
 #endif //USING_CREG
 
@@ -250,8 +243,8 @@ void CReadMap::Initialize()
 			((  mapDims.hmapx     * mapDims.hmapy           * sizeof(float))         / 1024) +   // MetalMap::extractionMap
 			((  mapDims.hmapx     * mapDims.hmapy           * sizeof(unsigned char)) / 1024);    // MetalMap::metalMap
 
-		// mipCenterHeightMaps[i]
-		for (int i = 1; i < numHeightMipMaps; i++) {
+		// mipHeightMaps[i]
+		for (int i = 0; i < numHeightMipMaps; i++) {
 			reqMemFootPrintKB += ((((mapDims.mapx >> i) * (mapDims.mapy >> i)) * sizeof(float)) / 1024);
 		}
 
@@ -267,17 +260,14 @@ void CReadMap::Initialize()
 	faceNormalsUnsynced.resize(mapDims.mapx * mapDims.mapy * 2);
 	centerNormalsSynced.resize(mapDims.mapx * mapDims.mapy);
 	centerNormalsUnsynced.resize(mapDims.mapx * mapDims.mapy);
-	centerNormals2DSynced.resize(mapDims.mapx * mapDims.mapy);
-	centerNormals2DUnsynced.resize(mapDims.mapx * mapDims.mapy);
 	centerHeightMap.resize(mapDims.mapx * mapDims.mapy);
 
-	mipCenterHeightMaps.resize(numHeightMipMaps - 1);
-	mipPointerHeightMaps.resize(numHeightMipMaps, nullptr);
-	mipPointerHeightMaps[0] = &centerHeightMap[0];
+	centerNormals2D.resize(mapDims.mapx, mapDims.mapy);
 
-	for (int i = 1; i < numHeightMipMaps; i++) {
-		mipCenterHeightMaps[i - 1].resize((mapDims.mapx >> i) * (mapDims.mapy >> i));
-		mipPointerHeightMaps[i] = &mipCenterHeightMaps[i - 1][0];
+	mipHeightMaps.resize(numHeightMipMaps);
+
+	for (int i = 0; i < numHeightMipMaps; i++) {
+		mipHeightMaps[i].resize((mapDims.mapx >> i), (mapDims.mapy >> i));
 	}
 
 	slopeMap.resize(mapDims.hmapx * mapDims.hmapy);
@@ -305,9 +295,6 @@ void CReadMap::Initialize()
 
 		sharedCenterNormals[0] = &centerNormalsUnsynced[0];
 		sharedCenterNormals[1] = &centerNormalsSynced[0];
-
-		sharedCenterNormals2D[0] = &centerNormals2DUnsynced[0];
-		sharedCenterNormals2D[1] = &centerNormals2DSynced[0];
 
 		sharedSlopeMaps[0] = &slopeMap[0]; // NO UNSYNCED VARIANT
 		sharedSlopeMaps[1] = &slopeMap[0];
@@ -354,7 +341,8 @@ unsigned int CReadMap::CalcHeightmapChecksum()
 unsigned int CReadMap::CalcTypemapChecksum()
 {
 	unsigned int checksum = 0;
-	checksum = HsiehHash(&typeMap[0], typeMap.size() * sizeof(typeMap[0]), checksum);
+	const std::vector<uint8_t>& typeMapData = typeMap.GetDataRef();
+	checksum = HsiehHash(&typeMapData[0], typeMapData.size() * sizeof(typeMapData[0]), checksum);
 
 	for (unsigned int i = 0; i < CMapInfo::NUM_TERRAIN_TYPES; i++) {
 		const CMapInfo::TerrainType& tt = mapInfo->terrainTypes[i];
@@ -481,24 +469,35 @@ void CReadMap::UpdateCenterHeightmap(const SRectangle& rect, bool initialize)
 
 void CReadMap::UpdateMipHeightmaps(const SRectangle& rect, bool initialize)
 {
-	for (int i = 0; i < numHeightMipMaps - 1; i++) {
-		const int hmapx = mapDims.mapx >> i;
+	{
+		BlockMap<float>& baseMipMap = mipHeightMaps[0];
+		const int sx = rect.x1;
+		const int ex = rect.x2;
+		const int sy = rect.z1;
+		const int ey = rect.z2;
+		for (int y = sy; y < ey; y++) {
+			for (int x = sx; x < ex; x++) {
+				baseMipMap.Set(x, y, centerHeightMap[x + y * mapDims.mapx]);
+			}
+		}
+	}
 
+	for (int i = 0; i < numHeightMipMaps - 1; i++) {
 		const int sx = (rect.x1 >> i) & (~1);
 		const int ex = (rect.x2 >> i);
 		const int sy = (rect.z1 >> i) & (~1);
 		const int ey = (rect.z2 >> i);
-		float* topMipMap = mipPointerHeightMaps[i];
-		float* subMipMap = mipPointerHeightMaps[i + 1];
+		const BlockMap<float>& topMipMap = mipHeightMaps[i];
+		BlockMap<float>& subMipMap = mipHeightMaps[i + 1];
 
 		for (int y = sy; y < ey; y += 2) {
 			for (int x = sx; x < ex; x += 2) {
 				const float height =
-					topMipMap[(x    ) + (y    ) * hmapx] +
-					topMipMap[(x    ) + (y + 1) * hmapx] +
-					topMipMap[(x + 1) + (y    ) * hmapx] +
-					topMipMap[(x + 1) + (y + 1) * hmapx];
-				subMipMap[(x / 2) + (y / 2) * hmapx / 2] = height * 0.25f;
+					topMipMap.Get(x    , y    ) +
+					topMipMap.Get(x    , y + 1) +
+					topMipMap.Get(x + 1, y    ) +
+					topMipMap.Get(x + 1, y + 1);
+				subMipMap.Set(x / 2, y / 2, height * 0.25f);
 			}
 		}
 	}
@@ -561,14 +560,13 @@ void CReadMap::UpdateFaceNormals(const SRectangle& rect, bool initialize)
 			faceNormalsSynced[(y * mapDims.mapx + x) * 2 + 1] = fnBR;
 			// square-normal
 			centerNormalsSynced[y * mapDims.mapx + x] = (fnTL + fnBR).Normalize();
-			centerNormals2DSynced[y * mapDims.mapx + x] = (fnTL + fnBR).Normalize2D();
+			centerNormals2D.Set(x, y, (fnTL + fnBR).Normalize2D());
 
 			#ifdef USE_UNSYNCED_HEIGHTMAP
 			if (initialize) {
 				faceNormalsUnsynced[(y * mapDims.mapx + x) * 2    ] = faceNormalsSynced[(y * mapDims.mapx + x) * 2    ];
 				faceNormalsUnsynced[(y * mapDims.mapx + x) * 2 + 1] = faceNormalsSynced[(y * mapDims.mapx + x) * 2 + 1];
 				centerNormalsUnsynced[y * mapDims.mapx + x] = centerNormalsSynced[y * mapDims.mapx + x];
-				centerNormals2DUnsynced[y * mapDims.mapx + x] = centerNormals2DSynced[y * mapDims.mapx + x];
 			}
 			#endif
 		}

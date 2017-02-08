@@ -3930,10 +3930,10 @@ int LuaSyncedCtrl::SetMapSquareTerrainType(lua_State* L)
 	const int tx = hx >> 1;
 	const int tz = hz >> 1;
 
-	const int ott = readMap->GetTypeMapSynced()[tz * mapDims.hmapx + tx];
+	const int ott = readMap->GetTypeMapBlockMap().Get(tx, tz);
 	const int ntt = luaL_checkint(L, 3);
 
-	readMap->GetTypeMapSynced()[tz * mapDims.hmapx + tx] = std::max(0, std::min(ntt, (CMapInfo::NUM_TERRAIN_TYPES - 1)));
+	readMap->GetTypeMapBlockMap().Set(tx, tz, std::max(0, std::min(ntt, (CMapInfo::NUM_TERRAIN_TYPES - 1))));
 	pathManager->TerrainChange(hx, hz,  hx + 1, hz + 1,  TERRAINCHANGE_SQUARE_TYPEMAP_INDEX);
 
 	lua_pushnumber(L, ott);
@@ -3977,12 +3977,12 @@ int LuaSyncedCtrl::SetTerrainTypeData(lua_State* L)
 	}
 	*/
 
-	const unsigned char* typeMap = readMap->GetTypeMapSynced();
+	const BlockMap<uint8_t>& typeMap = readMap->GetTypeMapBlockMap();
 
 	// update all map-squares set to this terrain-type (slow)
 	for (int tx = 0; tx < mapDims.hmapx; tx++) {
 		for (int tz = 0; tz < mapDims.hmapy; tz++) {
-			if (typeMap[tz * mapDims.hmapx + tx] == tti) {
+			if (typeMap.Get(tx, tz) == tti) {
 				pathManager->TerrainChange((tx << 1), (tz << 1),  (tx << 1) + 1, (tz << 1) + 1,  TERRAINCHANGE_TYPEMAP_SPEED_VALUES);
 			}
 		}

@@ -4969,12 +4969,10 @@ int LuaSyncedRead::GetGroundInfo(lua_State* L)
 	const float x = luaL_checkfloat(L, 1);
 	const float z = luaL_checkfloat(L, 2);
 
-	const int ix = Clamp(x, 0.0f, float3::maxxpos) / (SQUARE_SIZE * 2);
-	const int iz = Clamp(z, 0.0f, float3::maxzpos) / (SQUARE_SIZE * 2);
+	const int ix = Clamp((int) (x / (SQUARE_SIZE * 2)), 0, mapDims.hmapx - 1);
+	const int iz = Clamp((int) (z / (SQUARE_SIZE * 2)), 0, mapDims.hmapy - 1);
 
-	const int maxIndex = (mapDims.hmapx * mapDims.hmapy) - 1;
-	const int sqrIndex = std::min(maxIndex, (mapDims.hmapx * iz) + ix);
-	const int typeIndex = readMap->GetTypeMapSynced()[sqrIndex];
+	const int typeIndex = readMap->GetTypeMapBlockMap().Get(ix, iz);
 
 	// arguments to LuaMetalMap::GetMetalAmount in half-heightmap coors
 	lua_pop(L, 2);
@@ -5723,7 +5721,7 @@ int LuaSyncedRead::GetRadarErrorParams(lua_State* L)
 
 	if (IsAlliedAllyTeam(L, allyTeamID)) {
 		lua_pushnumber(L, losHandler->GetAllyTeamRadarErrorSize(allyTeamID));
-	} else { 
+	} else {
 		lua_pushnumber(L, losHandler->GetBaseRadarErrorSize());
 	}
 	lua_pushnumber(L, losHandler->GetBaseRadarErrorSize());

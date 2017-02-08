@@ -2219,11 +2219,11 @@ EXPORT(int) skirmishAiCallback_Map_getHardnessModMap(int skirmishAIId, float* ha
 	int hardModsSize = hardModsRealSize;
 
 	if (hardMods != nullptr) {
-		const unsigned char* typeMap = readMap->GetTypeMapSynced();
+		const BlockMap<uint8_t>& typeMap = readMap->GetTypeMapBlockMap();
 		hardModsSize = std::min(hardModsRealSize, hardModsMaxSize);
 
 		for (int i = 0; i < hardModsSize; ++i) {
-			hardMods[i] = mapInfo->terrainTypes[typeMap[i]].hardness;
+			hardMods[i] = mapInfo->terrainTypes[typeMap.Get(i % mapDims.hmapx, i / mapDims.hmapx)].hardness;
 		}
 	}
 
@@ -2241,28 +2241,28 @@ EXPORT(int) skirmishAiCallback_Map_getSpeedModMap(
 	int speedModsSize = speedModsRealSize;
 
 	if (speedMods != nullptr) {
-		const unsigned char* typeMap = readMap->GetTypeMapSynced();
+		const BlockMap<uint8_t>& typeMap = readMap->GetTypeMapBlockMap();
 		speedModsSize = std::min(speedModsRealSize, speedModsMaxSize);
 
 		switch (speedModClass) {
 			case MoveDef::Tank:
 				for (int i = 0; i < speedModsSize; ++i) {
-					speedMods[i] = mapInfo->terrainTypes[typeMap[i]].tankSpeed;
+					speedMods[i] = mapInfo->terrainTypes[typeMap.Get(i % mapDims.hmapx, i / mapDims.hmapx)].tankSpeed;
 				}
 				break;
 			case MoveDef::KBot:
 				for (int i = 0; i < speedModsSize; ++i) {
-					speedMods[i] = mapInfo->terrainTypes[typeMap[i]].kbotSpeed;
+					speedMods[i] = mapInfo->terrainTypes[typeMap.Get(i % mapDims.hmapx, i / mapDims.hmapx)].kbotSpeed;
 				}
 				break;
 			case MoveDef::Hover:
 				for (int i = 0; i < speedModsSize; ++i) {
-					speedMods[i] = mapInfo->terrainTypes[typeMap[i]].hoverSpeed;
+					speedMods[i] = mapInfo->terrainTypes[typeMap.Get(i % mapDims.hmapx, i / mapDims.hmapx)].hoverSpeed;
 				}
 				break;
 			case MoveDef::Ship:
 				for (int i = 0; i < speedModsSize; ++i) {
-					speedMods[i] = mapInfo->terrainTypes[typeMap[i]].shipSpeed;
+					speedMods[i] = mapInfo->terrainTypes[typeMap.Get(i % mapDims.hmapx, i / mapDims.hmapx)].shipSpeed;
 				}
 				break;
 			default:

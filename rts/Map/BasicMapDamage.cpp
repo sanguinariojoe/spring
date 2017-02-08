@@ -68,7 +68,7 @@ void CBasicMapDamage::Explosion(const float3& pos, float strength, float radius)
 
 	const float* curHeightMap = readMap->GetCornerHeightMapSynced();
 	const float* orgHeightMap = readMap->GetOriginalHeightMapSynced();
-	const unsigned char* typeMap = readMap->GetTypeMapSynced();
+	const BlockMap<uint8_t>& typeMap = readMap->GetTypeMapBlockMap();
 
 	const float baseStrength = -math::pow(strength, 0.6f) * 3.0f;
 	const float invRadius = 1.0f / radius;
@@ -89,7 +89,7 @@ void CBasicMapDamage::Explosion(const float3& pos, float strength, float radius)
 			const float relDist = std::min(1.0f, expDist * invRadius);
 
 			const unsigned int tableIdx = relDist * CRATER_TABLE_SIZE;
-			// const unsigned int ttypeIdx = typeMap[(y >> 1) * mapDims.hmapx + (x >> 1)];
+			// const unsigned int ttypeIdx = typeMap.Get(x >> 1, y >> 1);
 
 
 			// prevent formation of spikes from isolated "soft spots"
@@ -102,7 +102,7 @@ void CBasicMapDamage::Explosion(const float3& pos, float strength, float radius)
 				for (int i = -1; i <= 1; i++) {
 					const int tmz = Clamp((y >> 1) + j, 0, mapDims.hmapy - 1);
 					const int tmx = Clamp((x >> 1) + i, 0, mapDims.hmapx - 1);
-					const int tti = typeMap[tmz * mapDims.hmapx + tmx];
+					const int tti = typeMap.Get(tmx, tmz);
 					sumRawHardness += (rawHardness[tti] * weightTable[(j + 1) * 3 + (i + 1)]);
 				}
 			}
@@ -147,7 +147,7 @@ void CBasicMapDamage::Explosion(const float3& pos, float strength, float radius)
 				const float relDist = std::min(1.0f, expDist * invRadius);
 
 				const unsigned int tableIdx = relDist * CRATER_TABLE_SIZE;
-				const unsigned int ttypeIdx = typeMap[(z >> 1) * mapDims.hmapx + (x >> 1)];
+				const unsigned int ttypeIdx = typeMap.Get(x >> 1, z >> 1);
 
 				const float prevDif = curHeightMap[z * mapDims.mapxp1 + x] - orgHeightMap[z * mapDims.mapxp1 + x];
 				      float explDif = baseStrength;

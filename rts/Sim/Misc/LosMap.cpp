@@ -582,19 +582,17 @@ void CLosMap::UnsafeLosAdd(SLosInstance* li) const
 		const size_t oidx = ToAngleMapIdx(int2(sx - pos.x, y), radius);
 		float* anglesPtr = &anglesMap[oidx];
 		char* squaresPtr = &squaresMap[oidx];
-		int idx = MAP_SQUARE(int2(sx, y_));
 		for (unsigned x_ = sx; x_ < ex; ++x_) {
 			const int2 off(x_ - pos.x, y);
 
 			if (off == int2(0,0)) {
-				++idx;
 				++anglesPtr;
 				++squaresPtr;
 				continue;
 			}
 
 			const float invR = isqrtTableLookup(off.x*off.x + off.y*off.y, threadNum);
-			const float dh = std::max(0.f, heightmap[idx++]) - losHeight;
+			const float dh = std::max(0.f, heightmap.Get(x_, y_)) - losHeight;
 
 			*(anglesPtr++) = (dh + LOS_BONUS_HEIGHT) * invR;
 			*(squaresPtr++) = true;
@@ -655,19 +653,17 @@ void CLosMap::SafeLosAdd(SLosInstance* li) const
 			const size_t oidx = ToAngleMapIdx(int2(sx - pos.x, y), radius);
 			float* anglesPtr = &anglesMap[oidx];
 			char* squaresPtr = &squaresMap[oidx];
-			int idx = MAP_SQUARE(int2(sx, y_));
 			for (unsigned x_ = sx; x_ < ex; ++x_) {
 				const int2 off(x_ - pos.x, y);
 
 				if (off == int2(0,0)) {
-					++idx;
 					++anglesPtr;
 					++squaresPtr;
 					continue;
 				}
 
 				const float invR = isqrtTableLookup(off.x*off.x + off.y*off.y, threadNum);
-				const float dh = std::max(0.f, heightmap[idx++]) - losHeight;
+				const float dh = std::max(0.f, heightmap.Get(x_, y_)) - losHeight;
 
 				*(anglesPtr++) = (dh + LOS_BONUS_HEIGHT) * invR;
 				*(squaresPtr++) = true;

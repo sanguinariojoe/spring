@@ -6,6 +6,7 @@
 #define LOS_MAP_H
 
 #include <vector>
+#include "Map/BlockMap.h"
 #include "System/type2.h"
 #include "System/myMath.h"
 
@@ -17,7 +18,7 @@ struct SLosInstance;
 class CLosMap
 {
 public:
-	CLosMap(int2 size_, bool sendReadmapEvents_, const float* heightmap_, const int2 mapDims)
+	CLosMap(int2 size_, bool sendReadmapEvents_, const BlockMap<float>& heightmap_, const int2 mapDims)
 	: size(size_)
 	, LOS2HEIGHT(mapDims / size)
 	, losmap(size.x * size.y, 0)
@@ -57,7 +58,7 @@ protected:
 	const int2 LOS2HEIGHT;
 	std::vector<unsigned short> losmap;
 	bool sendReadmapEvents;
-	const float* const heightmap;
+	const BlockMap<float>& heightmap;
 };
 
 #endif // LOS_MAP_H
