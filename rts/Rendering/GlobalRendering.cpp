@@ -311,6 +311,7 @@ bool CGlobalRendering::CreateGLContext(const int2& minCtx)
 	char buf[1024] = {0};
 	SNPRINTF(buf, sizeof(buf), frmts[false], __func__, SDL_GetError(), minCtx.x, minCtx.y, profs[forceCoreContext]);
 
+	uint32_t contextProfile;
 	for (const int2 tmpCtx: glCtxs) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, tmpCtx.x);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, tmpCtx.y);
@@ -322,8 +323,10 @@ bool CGlobalRendering::CreateGLContext(const int2& minCtx)
 				LOG_L(L_WARNING, frmts[false], __func__, SDL_GetError(), tmpCtx.x, tmpCtx.y, profs[mask == SDL_GL_CONTEXT_PROFILE_CORE]);
 			} else {
 				// save the lowest successfully created fallback compatibility-context
-				if (mask == SDL_GL_CONTEXT_PROFILE_COMPATIBILITY && cmpCtx.x == 0 && tmpCtx.x >= minCtx.x)
+				if (cmpCtx.x == 0 && tmpCtx.x >= minCtx.x) {
 					cmpCtx = tmpCtx;
+					contextProfile = mask;
+				}
 
 				LOG_L(L_WARNING, frmts[true], __func__, tmpCtx.x, tmpCtx.y, profs[mask == SDL_GL_CONTEXT_PROFILE_CORE]);
 			}
@@ -340,7 +343,7 @@ bool CGlobalRendering::CreateGLContext(const int2& minCtx)
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, cmpCtx.x);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, cmpCtx.y);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, contextProfile);
 
 	// should never fail at this point
 	return ((glContext = SDL_GL_CreateContext(window)) != nullptr);
