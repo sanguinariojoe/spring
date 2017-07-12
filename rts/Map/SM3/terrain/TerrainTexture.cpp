@@ -281,8 +281,9 @@ namespace terrain {
 		}
 
 		// Create texture application object
-		if (!cfg->forceFallbackTexturing && GLEW_ARB_fragment_shader && GLEW_ARB_vertex_shader &&
-			GLEW_ARB_shader_objects && GLEW_ARB_shading_language_100) {
+		if (GLEW_ARB_fragment_shader && GLEW_ARB_vertex_shader &&
+			GLEW_ARB_shader_objects &&
+			(GLEW_ARB_shading_language_100 || GLEW_ARB_shading_language_420pack)) {
 			shaderHandler = new GLSLShaderHandler;
 		} else {
 			// texture_env_combine as fallback

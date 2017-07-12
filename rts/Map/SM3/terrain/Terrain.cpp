@@ -35,7 +35,6 @@ namespace terrain {
 		cacheTextureSize = 128;
 		useShadowMaps = false;
 		anisotropicFiltering = 0;
-		forceFallbackTexturing = false;
 		maxLodLevel = 4;
 		useStaticShadow = false;
 	}

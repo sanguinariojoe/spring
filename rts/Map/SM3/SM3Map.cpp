@@ -126,9 +126,9 @@ void CSM3ReadMap::ConfigNotify(const std::string& key, const std::string& value)
 CBaseGroundDrawer* CSM3ReadMap::GetGroundDrawer() { return groundDrawer; }
 void CSM3ReadMap::InitGroundDrawer() {
 	renderer->config.cacheTextures = false;
-	renderer->config.forceFallbackTexturing = configHandler->GetBool("SM3ForceFallbackTex");
 
-	if (!renderer->config.forceFallbackTexturing && GLEW_ARB_fragment_shader && GLEW_ARB_shading_language_100) {
+	if (GLEW_ARB_fragment_shader &&
+		(GLEW_ARB_shading_language_100 || GLEW_ARB_shading_language_420pack)) {
 		renderer->config.useBumpMaps = true;
 		renderer->config.anisotropicFiltering = 0.0f;
 	}
