@@ -528,7 +528,7 @@ void CGlobalRendering::SetGLSupportFlags()
 	haveGLSL &= !!GLEW_VERSION_2_0; // we want OpenGL 2.0 core functions
 
 	#ifndef HEADLESS
-	if (!haveARB || !haveGLSL)
+	if (!haveARB && !haveGLSL)
 		throw unsupported_error("OpenGL shaders not supported, aborting");
 	#endif
 
