@@ -463,8 +463,8 @@ void CGlobalRendering::PostInit() {
 	char glVidMemStr[64] = "unknown";
 
 	QueryVersionInfo(sdlVersionStr, glVidMemStr);
-	CheckGLExtensions();
 	SetGLSupportFlags();
+	CheckGLExtensions();
 	QueryGLMaxVals();
 
 	LogVersionInfo(sdlVersionStr, glVidMemStr);
