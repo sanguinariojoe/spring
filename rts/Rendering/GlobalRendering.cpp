@@ -344,6 +344,10 @@ bool CGlobalRendering::CreateGLContext(const int2& minCtx)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, cmpCtx.x);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, cmpCtx.y);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, contextProfile);
+	// Notify the rest of code we are in a core profile
+	configHandler->Set("ForceCoreContext",
+		contextProfile == SDL_GL_CONTEXT_PROFILE_CORE,
+		true);
 
 	// should never fail at this point
 	return ((glContext = SDL_GL_CreateContext(window)) != nullptr);
@@ -684,6 +688,7 @@ void CGlobalRendering::LogVersionInfo(const char* sdlVersionStr, const char* glV
 	LOG("[GR::%s]", __func__);
 	LOG("\tSDL version : %s", sdlVersionStr);
 	LOG("\tGL version  : %s", globalRenderingInfo.glVersion);
+	LOG("\tCore profile: %d", configHandler->GetInt("ForceCoreContext"));
 	LOG("\tGL vendor   : %s", globalRenderingInfo.glVendor);
 	LOG("\tGL renderer : %s", globalRenderingInfo.glRenderer);
 	LOG("\tGLSL version: %s", globalRenderingInfo.glslVersion);
