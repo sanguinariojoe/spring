@@ -86,20 +86,21 @@ void CModInfo::ResetState()
 	allowTake = true;
 }
 
-void CModInfo::Init(const char* modArchive)
+void CModInfo::Init(const std::string& modFileName)
 {
-	filename = modArchive;
-	humanNameVersioned = archiveScanner->NameFromArchive(modArchive);
+	{
+		filename = modFileName;
+		humanNameVersioned = archiveScanner->GameHumanNameFromArchive(modFileName);
 
-	const CArchiveScanner::ArchiveData md = archiveScanner->GetArchiveData(humanNameVersioned);
+		const CArchiveScanner::ArchiveData& md = archiveScanner->GetArchiveData(humanNameVersioned);
 
-	humanName   = md.GetName();
-	shortName   = md.GetShortName();
-	version     = md.GetVersion();
-	mutator     = md.GetMutator();
-	description = md.GetDescription();
+		humanName   = md.GetName();
+		shortName   = md.GetShortName();
+		version     = md.GetVersion();
+		mutator     = md.GetMutator();
+		description = md.GetDescription();
+	}
 
-	// initialize the parser
 	LuaParser parser("gamedata/modrules.lua", SPRING_VFS_MOD_BASE, SPRING_VFS_ZIP);
 	// customize the defs environment
 	parser.GetTable("Spring");
@@ -108,7 +109,7 @@ void CModInfo::Init(const char* modArchive)
 	parser.Execute();
 
 	if (!parser.IsValid())
-		LOG_L(L_ERROR, "Failed loading mod-rules, using defaults; error: %s", parser.GetErrorLog().c_str());
+		LOG_L(L_ERROR, "[ModInfo::%s] error \"%s\" loading mod-rules, using defaults", __func__, parser.GetErrorLog().c_str());
 
 	const LuaTable& root = parser.GetRoot();
 

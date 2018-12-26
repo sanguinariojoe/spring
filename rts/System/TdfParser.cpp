@@ -81,12 +81,12 @@ TdfParser::TdfSection::~TdfSection()
 
 
 
-TdfParser::TdfParser(char const* buf, size_t size)
+TdfParser::TdfParser(const char* buf, size_t size)
 {
 	LoadBuffer(buf, size);
 }
 
-TdfParser::TdfParser(std::string const& filename)
+TdfParser::TdfParser(const std::string& filename)
 {
 	LoadFile(filename);
 }
@@ -127,7 +127,7 @@ void TdfParser::ParseLuaTable(const LuaTable& table, TdfSection* currentSection)
 }
 
 
-void TdfParser::ParseBuffer(char const* buf, size_t size) {
+void TdfParser::ParseBuffer(const char* buf, size_t size) {
 	CVFSHandler* oldHandler = vfsHandler;
 	CVFSHandler  tmpHandler;
 
@@ -148,140 +148,158 @@ void TdfParser::ParseBuffer(char const* buf, size_t size) {
 	CVFSHandler::FreeLock();
 }
 
-void TdfParser::LoadBuffer(char const* buf, size_t size)
+void TdfParser::LoadBuffer(const char* buf, size_t size)
 {
 	this->filename = "buffer";
 	ParseBuffer(buf, size);
 }
 
 
-void TdfParser::LoadFile(std::string const& filename)
+void TdfParser::LoadFile(const std::string& filename)
 {
 
-	this->filename = filename;
-	CFileHandler file(filename);
-	if (!file.FileExists()) {
+	CFileHandler file(this->filename = filename);
+	std::vector<unsigned char> fileBuf;
+
+	if (!file.FileExists())
 		throw content_error("file " + filename + " not found");
+
+	if (!file.IsBuffered()) {
+		fileBuf.resize(file.FileSize(), 0);
+		file.Read(fileBuf.data(), fileBuf.size());
+	} else {
+		fileBuf = std::move(file.GetBuffer());
 	}
 
-	const size_t fileBuf_size = file.FileSize();
-	//char* fileBuf = new char[fileBuf_size];
-	std::vector<char> fileBuf(fileBuf_size);
-
-	file.Read(fileBuf.data(), file.FileSize());
-	ParseBuffer(fileBuf.data(), fileBuf_size);
-
-	//delete[] fileBuf;
+	ParseBuffer(reinterpret_cast<const char*>(fileBuf.data()), fileBuf.size());
 }
 
 
-std::string TdfParser::SGetValueDef(std::string const& defaultValue, std::string const& location) const
+std::string TdfParser::SGetValueDef(const std::string& defaultValue, const std::string& location) const
 {
-	std::string lowerd = StringToLower(location);
+	std::string lcLocation = StringToLower(location);
 	std::string value;
-	bool found = SGetValue(value, lowerd);
-	if (!found) {
+
+	if (!SGetValue(value, lcLocation))
 		value = defaultValue;
-	}
+
 	return value;
 }
 
-bool TdfParser::SGetValue(std::string &value, std::string const& location) const
+bool TdfParser::SGetValue(std::string& value, const std::string& location) const
 {
-	std::string lowerd = StringToLower(location);
+	std::string lcLocation = StringToLower(location);
 	std::string searchpath; // for error-messages
+
 	// split the location string
-	const std::vector<std::string>& loclist = GetLocationVector(lowerd);
+	const std::vector<std::string>& loclist = GetLocationVector(lcLocation);
 	sectionsMap_t::const_iterator sit = root_section.sections.find(loclist[0]);
+
 	if (sit == root_section.sections.end()) {
 		value = "Section " + loclist[0] + " missing in file " + filename;
 		return false;
 	}
+
 	TdfSection* sectionptr = sit->second;
 	searchpath = loclist[0];
+
 	for (unsigned int i=1; i < loclist.size()-1; ++i) {
 		//const char *arg = loclist[i].c_str();
 		searchpath += '\\';
 		searchpath += loclist[i];
-		sit = sectionptr->sections.find(loclist[i]);
-		if (sit == sectionptr->sections.end()) {
+
+		if ((sit = sectionptr->sections.find(loclist[i])) == sectionptr->sections.end()) {
 			value = "Section " + searchpath + " missing in file " + filename;
 			return false;
 		}
+
 		sectionptr = sit->second;
 	}
+
 	searchpath += '\\';
 	searchpath += loclist[loclist.size()-1];
 
-	valueMap_t::const_iterator vit =
-		sectionptr->values.find(loclist[loclist.size()-1]);
+	const valueMap_t::const_iterator vit = sectionptr->values.find(loclist.back());
+
 	if (vit == sectionptr->values.end()) {
 		value = "Value " + searchpath + " missing in file " + filename;
 		return false;
 	}
-	std::string svalue = vit->second;
-	value = svalue;
+
+	value = vit->second;
 	return true;
 }
 
 bool TdfParser::GetValue(bool& val, const std::string& location) const
 {
 	std::string buf;
-	if (SGetValue(buf, location)) {
-		int tempval;
-		std::istringstream stream(buf);
-		stream >> tempval;
-		val = (tempval != 0);
-		return true;
-	} else {
+	std::stringstream stream;
+
+	if (!SGetValue(buf, location))
 		return false;
-	}
+
+	int tempval;
+	stream << buf;
+	stream >> tempval;
+
+	val = (tempval != 0);
+	return true;
 }
 
-const TdfParser::valueMap_t& TdfParser::GetAllValues(std::string const& location) const
+const TdfParser::valueMap_t& TdfParser::GetAllValues(const std::string& location) const
 {
-	static valueMap_t emptymap;
-	std::string lowerd = StringToLower(location);
-	const std::vector<std::string>& loclist = GetLocationVector(lowerd);
+	const static valueMap_t emptymap;
+
+	const std::string& lcLocation = StringToLower(location);
+	const std::vector<std::string>& loclist = GetLocationVector(lcLocation);
+
 	sectionsMap_t::const_iterator sit = root_section.sections.find(loclist[0]);
+
 	if (sit == root_section.sections.end()) {
-		LOG_L(L_WARNING, "Section %s missing in file %s",
-				loclist[0].c_str(), filename.c_str());
+		LOG_L(L_WARNING, "Section %s missing in file %s", loclist[0].c_str(), filename.c_str());
 		return emptymap;
 	}
+
 	TdfSection* sectionptr = sit->second;
 	std::string searchpath = loclist[0]; // for error-messages
-	for (unsigned int i=1; i < loclist.size(); i++) {
+
+	for (unsigned int i = 1; i < loclist.size(); i++) {
 		searchpath += '\\';
 		searchpath += loclist[i];
+
 		sit = sectionptr->sections.find(loclist[i]);
+
 		if (sit == sectionptr->sections.end()) {
-			LOG_L(L_WARNING, "Section %s missing in file %s",
-					searchpath.c_str(), filename.c_str());
+			LOG_L(L_WARNING, "Section %s missing in file %s", searchpath.c_str(), filename.c_str());
 			return emptymap;
 		}
+
 		sectionptr = sit->second;
 	}
+
 	return sectionptr->values;
 }
 
-std::vector<std::string> TdfParser::GetSectionList(std::string const& location) const
+std::vector<std::string> TdfParser::GetSectionList(const std::string& location) const
 {
-	const std::string& lowerd = StringToLower(location);
-	const std::vector<std::string>& loclist = GetLocationVector(lowerd);
+	const std::string& lcLocation = StringToLower(location);
+	const std::vector<std::string>& loclist = GetLocationVector(lcLocation);
+
 	const sectionsMap_t* sectionsptr = &root_section.sections;
 
 	std::vector<std::string> returnvec;
 
 	if (!loclist[0].empty()) {
 		std::string searchpath;
+
 		for (const auto& loc: loclist) {
 			searchpath += loc;
+
 			if (sectionsptr->find(loc) == sectionsptr->end()) {
-				LOG_L(L_WARNING, "Section %s missing in file %s",
-						searchpath.c_str(), filename.c_str());
+				LOG_L(L_WARNING, "Section %s missing in file %s", searchpath.c_str(), filename.c_str());
 				return returnvec;
 			}
+
 			sectionsptr = &sectionsptr->find(loc)->second->sections;
 			searchpath += '\\';
 		}
@@ -295,10 +313,10 @@ std::vector<std::string> TdfParser::GetSectionList(std::string const& location) 
 	return returnvec;
 }
 
-bool TdfParser::SectionExist(std::string const& location) const
+bool TdfParser::SectionExist(const std::string& location) const
 {
-	const std::string& lowerd = StringToLower(location);
-	const std::vector<std::string>& loclist = GetLocationVector(lowerd);
+	const std::string& lcLocation = StringToLower(location);
+	const std::vector<std::string>& loclist = GetLocationVector(lcLocation);
 
 	sectionsMap_t::const_iterator sit = root_section.sections.find(loclist[0]);
 
@@ -306,39 +324,40 @@ bool TdfParser::SectionExist(std::string const& location) const
 		return false;
 
 	TdfSection* sectionptr = sit->second;
+
 	for (unsigned int i = 1; i < loclist.size(); i++) {
-		sit = sectionptr->sections.find(loclist[i]);
-		if (sit == sectionptr->sections.end()) {
+		if ((sit = sectionptr->sections.find(loclist[i])) == sectionptr->sections.end())
 			return false;
-		}
-		sectionptr = sectionptr->sections[loclist[i]];
+
+		sectionptr = sectionptr->sections[ loclist[i] ];
 	}
+
 	return true;
 }
 
-std::vector<std::string> TdfParser::GetLocationVector(std::string const& location) const
+std::vector<std::string> TdfParser::GetLocationVector(const std::string& location) const
 {
-	const std::string& lowerd = StringToLower(location);
+	const std::string& lcLocation = StringToLower(location);
 
 	std::vector<std::string> loclist;
 	std::string::size_type start = 0;
 	std::string::size_type next = 0;
 
-	while ((next = lowerd.find_first_of('\\', start)) != std::string::npos) {
-		loclist.push_back(lowerd.substr(start, next-start));
+	while ((next = lcLocation.find_first_of('\\', start)) != std::string::npos) {
+		loclist.emplace_back(lcLocation.substr(start, next - start));
 		start = next + 1;
 	}
-	loclist.push_back(lowerd.substr(start));
 
+	loclist.emplace_back(lcLocation.substr(start));
 	return loclist;
 }
 
-float3 TdfParser::GetFloat3(float3 def, std::string const& location) const
+float3 TdfParser::GetFloat3(float3 def, const std::string& location) const
 {
 	std::string s = SGetValueDef("", location);
-	if (s.empty()) {
+	if (s.empty())
 		return def;
-	}
+
 	float3 ret;
 	ParseArray(s, &ret.x, 3);
 	return ret;

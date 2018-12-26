@@ -697,7 +697,7 @@ void CUnitDrawer::DrawIcon(CUnit* unit, bool useDefaultIcon)
 	const icon::CIconData* iconData = nullptr;
 
 	if (useDefaultIcon) {
-		iconData = icon::iconHandler->GetDefaultIconData();
+		iconData = icon::iconHandler.GetDefaultIconData();
 	} else {
 		iconData = unit->unitDef->iconType.GetIconData();
 	}
@@ -757,7 +757,7 @@ void CUnitDrawer::SetupAlphaDrawing(bool deferredPass)
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE * wireFrameMode + GL_FILL * (1 - wireFrameMode));
 
 	unitDrawerStates[DRAWER_STATE_SEL] = const_cast<IUnitDrawerState*>(GetWantedDrawerState(true));
-	unitDrawerStates[DRAWER_STATE_SEL]->Enable(this, deferredPass && false, true);
+	unitDrawerStates[DRAWER_STATE_SEL]->Enable(this, /*deferredPass*/ false, true);
 
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
@@ -769,7 +769,7 @@ void CUnitDrawer::SetupAlphaDrawing(bool deferredPass)
 
 void CUnitDrawer::ResetAlphaDrawing(bool deferredPass)
 {
-	unitDrawerStates[DRAWER_STATE_SEL]->Disable(this, deferredPass && false);
+	unitDrawerStates[DRAWER_STATE_SEL]->Disable(this, /*deferredPass*/ false);
 
 	glPopAttrib();
 }
@@ -1680,13 +1680,11 @@ inline const icon::CIconData* GetUnitIcon(const CUnit* unit) {
 	const bool unitVisible = ((losStatus & (LOS_INLOS | LOS_INRADAR)) && ((losStatus & prevMask) == prevMask));
 	const bool customIcon = (minimap->UseUnitIcons() && (unitVisible || gu->spectatingFullView));
 
-	if (customIcon) {
-		iconData = unitDef->iconType.GetIconData();
-	} else {
-		if (losStatus & LOS_INRADAR) {
-			iconData = icon::iconHandler->GetDefaultIconData();
-		}
-	}
+	if (customIcon)
+		return (unitDef->iconType.GetIconData());
+
+	if ((losStatus & LOS_INRADAR) != 0)
+		iconData = icon::iconHandler.GetDefaultIconData();
 
 	return iconData;
 }

@@ -124,10 +124,11 @@ public:
 	LuaParser(const std::string& textChunk, const std::string& accessModes, const boolean& synced = {false}, const boolean& setup = {true});
 	~LuaParser();
 
-	void SetupLua(bool synced);
+	void SetupLua(bool isSyncedCtxt, bool isDefsParser);
 
 	bool Execute();
-	bool IsValid() const { return (L != nullptr); }
+	bool IsValid() const { return (L != nullptr); } // true if nothing failed during Execute
+	bool NoTable() const { return (errorLog.find("no return table") == 0); } // parser is still valid if true
 
 	LuaTable GetRoot();
 	LuaTable SubTableExpr(const std::string& expr) {
@@ -161,7 +162,7 @@ public:
 	const std::string accessModes;
 
 private:
-	void SetupEnv(bool synced);
+	void SetupEnv(bool isSyncedCtxt, bool isDefsParser);
 	void PushParam();
 
 	void AddTable(LuaTable* tbl);

@@ -84,6 +84,7 @@ public:
 	static bool LoadSavedScript(const std::string& file, const std::string& script);
 	static bool ScriptLoaded();
 
+	// these act on the global GameSetup instance
 	static const spring::unordered_map<std::string, std::string>& GetMapOptions();
 	static const spring::unordered_map<std::string, std::string>& GetModOptions();
 	static const std::vector<PlayerBase>& GetPlayerStartingData();
@@ -125,7 +126,7 @@ public:
 	const std::vector<SkirmishAIData>& GetAIStartingDataCont() const { return skirmishAIStartingData; }
 	const std::vector<std::string>& GetMutatorsCont() const { return mutatorsList; }
 
-	const std::string MapFile() const;
+	std::string MapFileName() const;
 
 private:
 	void LoadMutators(const TdfParser& file, std::vector<std::string>& mutatorsList);

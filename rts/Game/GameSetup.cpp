@@ -136,12 +136,12 @@ bool CGameSetup::ScriptLoaded() {
 const spring::unordered_map<std::string, std::string>& CGameSetup::GetMapOptions()
 {
 	// will always be empty if !ScriptLoaded
-	return gameSetup->GetMapOptionsCont();
+	return (gameSetup->GetMapOptionsCont());
 }
 
 const spring::unordered_map<std::string, std::string>& CGameSetup::GetModOptions()
 {
-	return gameSetup->GetModOptionsCont();
+	return (gameSetup->GetModOptionsCont());
 }
 
 
@@ -233,7 +233,7 @@ void CGameSetup::LoadUnitRestrictions(const TdfParser& file)
 
 void CGameSetup::LoadStartPositionsFromMap(int numTeams, const std::function<bool(MapParser& mapParser, int teamNum)>& startPosPred)
 {
-	MapParser mapParser(MapFile());
+	MapParser mapParser(MapFileName());
 
 	if (!mapParser.IsValid())
 		throw content_error("MapInfo: " + mapParser.GetErrorLog());
@@ -630,13 +630,13 @@ bool CGameSetup::Init(const std::string& buf)
 
 	// Postprocessing
 	modName = GetRapidPackageFromTag(modName);
-	modName = archiveScanner->NameFromArchive(modName);
-	file.GetDef(onlyLocal, (archiveScanner->GetArchiveData(modName).GetOnlyLocal() ? "1" : "0"), "GAME\\OnlyLocal");
+	modName = archiveScanner->GameHumanNameFromArchive(modName);
 
+	file.GetDef(onlyLocal, (archiveScanner->GetArchiveData(modName).GetOnlyLocal() ? "1" : "0"), "GAME\\OnlyLocal");
 	return true;
 }
 
-const std::string CGameSetup::MapFile() const
+std::string CGameSetup::MapFileName() const
 {
 	return (archiveScanner->MapNameToMapFile(mapName));
 }

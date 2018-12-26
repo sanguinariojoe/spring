@@ -529,46 +529,54 @@ int LuaUnsyncedCtrl::PlaySoundFile(lua_State* L)
 			}
 		}
 
-		// last argument (with and without pos/speed arguments) is the optional `sfx channel`
-		IAudioChannel** channel = &Channels::General;
+		// last argument (with and without pos/speed arguments) is the optional channel
+		IAudioChannel* channel = Channels::General;
 
 		if (args >= index) {
 			if (lua_isstring(L, index)) {
-				string channelStr = lua_tostring(L, index);
-				StringToLowerInPlace(channelStr);
+				switch (hashString(lua_tostring(L, index))) {
+					case hashString("Battle"):
+					case hashString("battle"):
+					case hashString("SFX"   ):
+					case hashString("sfx"   ): {
+						channel = Channels::Battle;
+					} break;
 
-				if (channelStr == "battle" || channelStr == "sfx") {
-					channel = &Channels::Battle;
-				}
-				else if (channelStr == "unitreply" || channelStr == "voice") {
-					channel = &Channels::UnitReply;
-				}
-				else if (channelStr == "userinterface" || channelStr == "ui") {
-					channel = &Channels::UserInterface;
+					case hashString("UnitReply"):
+					case hashString("unitreply"):
+					case hashString("Voice"    ):
+					case hashString("voice"    ): {
+						channel = Channels::UnitReply;
+					} break;
+
+					case hashString("UserInterface"):
+					case hashString("userinterface"):
+					case hashString("UI"           ):
+					case hashString("ui"           ): {
+						channel = Channels::UserInterface;
+					} break;
+
+					default: {
+					} break;
 				}
 			} else if (lua_isnumber(L, index)) {
-				const int channelNum = lua_toint(L, index);
-
-				if (channelNum == 1) {
-					channel = &Channels::Battle;
-				}
-				else if (channelNum == 2) {
-					channel = &Channels::UnitReply;
-				}
-				else if (channelNum == 3) {
-					channel = &Channels::UserInterface;
+				switch (lua_toint(L, index)) {
+					case  1: { channel = Channels::Battle       ; } break;
+					case  2: { channel = Channels::UnitReply    ; } break;
+					case  3: { channel = Channels::UserInterface; } break;
+					default: {                                    } break;
 				}
 			}
 		}
 
 		if (index >= 6) {
 			if (index >= 9) {
-				channel[0]->PlaySample(soundID, pos, speed, volume);
+				channel->PlaySample(soundID, pos, speed, volume);
 			} else {
-				channel[0]->PlaySample(soundID, pos, volume);
+				channel->PlaySample(soundID, pos, volume);
 			}
 		} else
-			channel[0]->PlaySample(soundID, volume);
+			channel->PlaySample(soundID, volume);
 	}
 
 	if (!CLuaHandle::GetHandleSynced(L)) {
@@ -1683,7 +1691,7 @@ int LuaUnsyncedCtrl::AddUnitIcon(lua_State* L)
 	const float  size      = luaL_optnumber(L, 3, 1.0f);
 	const float  dist      = luaL_optnumber(L, 4, 1.0f);
 	const bool   radAdjust = luaL_optboolean(L, 5, false);
-	lua_pushboolean(L, icon::iconHandler->AddIcon(iconName, texName,
+	lua_pushboolean(L, icon::iconHandler.AddIcon(iconName, texName,
 	                                        size, dist, radAdjust));
 	return 1;
 }
@@ -1694,8 +1702,7 @@ int LuaUnsyncedCtrl::FreeUnitIcon(lua_State* L)
 	if (CLuaHandle::GetHandleSynced(L))
 		return 0;
 
-	const string iconName  = luaL_checkstring(L, 1);
-	lua_pushboolean(L, icon::iconHandler->FreeIcon(iconName));
+	lua_pushboolean(L, icon::iconHandler.FreeIcon(luaL_checkstring(L, 1)));
 	return 1;
 }
 
@@ -2172,7 +2179,7 @@ int LuaUnsyncedCtrl::SetUnitDefIcon(lua_State* L)
 	if (ud == nullptr)
 		return 0;
 
-	ud->iconType = icon::iconHandler->GetIcon(luaL_checksstring(L, 2));
+	ud->iconType = icon::iconHandler.GetIcon(luaL_checksstring(L, 2));
 
 	// set decoys to the same icon
 	if (ud->decoyDef != nullptr)
@@ -2887,14 +2894,15 @@ int LuaUnsyncedCtrl::SetLogSectionFilterLevel(lua_State* L) {
 
 int LuaUnsyncedCtrl::ClearWatchDogTimer(lua_State* L) {
 	if (lua_gettop(L) == 0) {
+		// clear for current thread
 		Watchdog::ClearTimer();
 		return 0;
 	}
 
 	if (lua_isstring(L, 1)) {
-		Watchdog::ClearTimer(lua_tostring(L, 1));
+		Watchdog::ClearTimer(lua_tostring(L, 1), luaL_optboolean(L, 2, false));
 	} else {
-		Watchdog::ClearTimer("main");
+		Watchdog::ClearTimer("main", luaL_optboolean(L, 2, false));
 	}
 
 	return 0;
